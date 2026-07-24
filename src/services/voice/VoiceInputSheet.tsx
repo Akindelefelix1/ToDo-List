@@ -3,11 +3,13 @@ import {
   Animated,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
-import {Check, Mic, Square, X} from 'lucide-react-native';
+import {Check, Mic, Square, Trash2, X} from 'lucide-react-native';
 
 import {PressableScale} from '../../components/PressableScale';
 import {useAppTheme} from '../../theme/ThemeProvider';
@@ -18,10 +20,13 @@ type Props = {
   state: 'idle' | 'listening' | 'processing' | 'error';
   transcript: string;
   error: string | null;
-  createdTasks: string[];
+  suggestedTasks: string[];
   onStart: () => void;
   onStop: () => void;
   onClose: () => void;
+  onChangeTask: (index: number, value: string) => void;
+  onRemoveTask: (index: number) => void;
+  onConfirm: () => void;
 };
 
 export function VoiceInputSheet({
@@ -29,13 +34,18 @@ export function VoiceInputSheet({
   state,
   transcript,
   error,
-  createdTasks,
+  suggestedTasks,
   onStart,
   onStop,
   onClose,
+  onChangeTask,
+  onRemoveTask,
+  onConfirm,
 }: Props) {
   const {theme} = useAppTheme();
   const pulse = useRef(new Animated.Value(1)).current;
+  const hasSuggestions = suggestedTasks.length > 0;
+  const validCount = suggestedTasks.filter(title => title.trim()).length;
 
   useEffect(() => {
     if (state !== 'listening') {
@@ -61,8 +71,6 @@ export function VoiceInputSheet({
     return () => animation.stop();
   }, [pulse, state]);
 
-  const hasResult = createdTasks.length > 0;
-
   return (
     <Modal
       animationType="fade"
@@ -70,7 +78,11 @@ export function VoiceInputSheet({
       transparent
       visible={visible}>
       <View style={styles.overlay}>
-        <Pressable accessibilityLabel="Close voice input" onPress={onClose} style={StyleSheet.absoluteFill} />
+        <Pressable
+          accessibilityLabel="Close voice input"
+          onPress={onClose}
+          style={StyleSheet.absoluteFill}
+        />
         <View style={[styles.sheet, {backgroundColor: theme.colors.surfaceElevated}]}>
           <View style={styles.handle} />
           <PressableScale
@@ -84,13 +96,13 @@ export function VoiceInputSheet({
             style={[
               styles.micHalo,
               {
-                backgroundColor: hasResult
+                backgroundColor: hasSuggestions
                   ? `${theme.colors.success}20`
                   : theme.colors.primarySoft,
                 transform: [{scale: pulse}],
               },
             ]}>
-            {hasResult ? (
+            {hasSuggestions ? (
               <Check color={theme.colors.success} size={32} strokeWidth={3} />
             ) : (
               <Mic color={theme.colors.primary} size={32} />
@@ -98,10 +110,8 @@ export function VoiceInputSheet({
           </Animated.View>
 
           <Text style={[styles.title, {color: theme.colors.text}]}>
-            {hasResult
-              ? `${createdTasks.length} ${
-                  createdTasks.length === 1 ? 'task' : 'tasks'
-                } added`
+            {hasSuggestions
+              ? 'Review your tasks'
               : state === 'listening'
                 ? 'Listening…'
                 : state === 'processing'
@@ -110,14 +120,13 @@ export function VoiceInputSheet({
                     ? 'Voice input paused'
                     : 'Add tasks by voice'}
           </Text>
-
           <Text style={[styles.hint, {color: theme.colors.textMuted}]}>
-            {hasResult
-              ? 'Your words were split into these tasks.'
+            {hasSuggestions
+              ? 'Edit or remove anything before adding it.'
               : 'Try “Buy provisions and call mom”.'}
           </Text>
 
-          {transcript ? (
+          {transcript && !hasSuggestions ? (
             <View style={[styles.transcript, {backgroundColor: theme.colors.background}]}>
               <Text style={[styles.transcriptText, {color: theme.colors.text}]}>
                 “{transcript}”
@@ -129,23 +138,45 @@ export function VoiceInputSheet({
             <Text style={[styles.error, {color: theme.colors.danger}]}>{error}</Text>
           ) : null}
 
-          {hasResult ? (
-            <View style={styles.results}>
-              {createdTasks.map((title, index) => (
-                <View key={`${title}-${index}`} style={styles.resultRow}>
-                  <View style={[styles.dot, {backgroundColor: theme.colors.success}]} />
-                  <Text style={[styles.resultText, {color: theme.colors.text}]}>
-                    {title}
-                  </Text>
+          {hasSuggestions ? (
+            <ScrollView
+              contentContainerStyle={styles.results}
+              keyboardShouldPersistTaps="handled"
+              style={styles.resultsScroll}>
+              {suggestedTasks.map((title, index) => (
+                <View key={`voice-task-${index}`} style={styles.resultRow}>
+                  <TextInput
+                    accessibilityLabel={`Voice task ${index + 1}`}
+                    maxLength={80}
+                    onChangeText={value => onChangeTask(index, value)}
+                    placeholder="Task title"
+                    placeholderTextColor={theme.colors.textMuted}
+                    style={[
+                      styles.resultInput,
+                      {
+                        backgroundColor: theme.colors.background,
+                        borderColor: theme.colors.border,
+                        color: theme.colors.text,
+                      },
+                    ]}
+                    value={title}
+                  />
+                  <PressableScale
+                    accessibilityLabel={`Remove voice task ${index + 1}`}
+                    onPress={() => onRemoveTask(index)}
+                    style={styles.removeButton}>
+                    <Trash2 color={theme.colors.danger} size={16} />
+                  </PressableScale>
                 </View>
               ))}
-            </View>
+            </ScrollView>
           ) : null}
 
           <PressableScale
+            disabled={hasSuggestions && validCount === 0}
             onPress={
-              hasResult
-                ? onClose
+              hasSuggestions
+                ? onConfirm
                 : state === 'listening'
                   ? onStop
                   : onStart
@@ -159,14 +190,14 @@ export function VoiceInputSheet({
             ]}>
             {state === 'listening' ? (
               <Square color="#FFFFFF" fill="#FFFFFF" size={14} />
-            ) : hasResult ? (
+            ) : hasSuggestions ? (
               <Check color="#FFFFFF" size={17} />
             ) : (
               <Mic color="#FFFFFF" size={17} />
             )}
             <Text style={styles.actionLabel}>
-              {hasResult
-                ? 'Done'
+              {hasSuggestions
+                ? `Add ${validCount} ${validCount === 1 ? 'task' : 'tasks'}`
                 : state === 'listening'
                   ? 'Finish speaking'
                   : 'Start listening'}
@@ -204,12 +235,6 @@ const styles = StyleSheet.create({
     top: spacing.lg,
     width: 34,
   },
-  dot: {
-    borderRadius: radius.pill,
-    height: 6,
-    marginTop: 6,
-    width: 6,
-  },
   error: {
     fontSize: fontSize.caption,
     lineHeight: 16,
@@ -233,34 +258,46 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'center',
     borderRadius: radius.pill,
-    height: 78,
+    height: 72,
     justifyContent: 'center',
-    width: 78,
+    width: 72,
   },
   overlay: {
     backgroundColor: 'rgba(8,12,22,0.54)',
     flex: 1,
     justifyContent: 'flex-end',
   },
+  removeButton: {
+    alignItems: 'center',
+    height: 42,
+    justifyContent: 'center',
+    width: 32,
+  },
+  resultInput: {
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    flex: 1,
+    fontSize: fontSize.body,
+    minHeight: 42,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
   resultRow: {
-    alignItems: 'flex-start',
+    alignItems: 'center',
     flexDirection: 'row',
     gap: spacing.sm,
   },
-  resultText: {
-    flex: 1,
-    fontSize: fontSize.body,
-    fontWeight: '600',
-  },
   results: {
-    alignSelf: 'stretch',
     gap: spacing.sm,
+  },
+  resultsScroll: {
     marginTop: spacing.lg,
+    maxHeight: 190,
   },
   sheet: {
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    minHeight: 410,
+    minHeight: 390,
     padding: spacing.xl,
     paddingBottom: spacing.xxl,
   },

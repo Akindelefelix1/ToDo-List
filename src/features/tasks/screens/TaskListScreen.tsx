@@ -1,7 +1,6 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
-  Alert,
-  FlatList,
+  SectionList,
   StyleSheet,
   Text,
   TextInput,
@@ -11,7 +10,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {
   ArrowDownUp,
-  CalendarClock,
   LayoutList,
   Mic,
   Moon,
@@ -26,16 +24,28 @@ import {Chip} from '../../../components/Chip';
 import {IconButton} from '../../../components/IconButton';
 import {LoadingView} from '../../../components/LoadingView';
 import {PressableScale} from '../../../components/PressableScale';
+import {SwipeActions} from '../../../components/SwipeActions';
+import {
+  UndoSnackbar,
+  type SnackbarNotice,
+} from '../../../components/UndoSnackbar';
+import {
+  cancelTaskReminder,
+  syncTaskReminder,
+} from '../../../services/reminders/taskReminders';
 import {VoiceInputSheet} from '../../../services/voice/VoiceInputSheet';
 import {useVoiceRecognition} from '../../../services/voice/useVoiceRecognition';
 import {useAppTheme} from '../../../theme/ThemeProvider';
 import {fontSize, radius, spacing} from '../../../theme/tokens';
 import type {RootStackParamList} from '../../../types/navigation';
+import {triggerHaptic} from '../../../utils/haptics';
 import {splitVoiceTasks} from '../../../utils/splitVoiceTasks';
 
 import {EmptyTasks} from '../components/EmptyTasks';
+import {SortSheet} from '../components/SortSheet';
 import {TaskItem} from '../components/TaskItem';
 import {TaskProgress} from '../components/TaskProgress';
+import {TaskSectionHeader} from '../components/TaskSectionHeader';
 import {TaskTableHeader, TaskTableRow} from '../components/TaskTable';
 import {useTasks} from '../context/TaskProvider';
 import type {
@@ -44,6 +54,10 @@ import type {
   TaskSort,
   TaskViewMode,
 } from '../types/task';
+import {
+  matchesTaskSearch,
+  organizeTaskSections,
+} from '../utils/taskList';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TaskList'>;
 
@@ -53,6 +67,19 @@ const filters: {label: string; value: TaskFilter}[] = [
   {label: 'Completed', value: 'completed'},
 ];
 const VIEW_MODE_KEY = '@todo-list/task-view-mode';
+const SORT_KEY = '@todo-list/task-sort';
+const validSorts: TaskSort[] = [
+  'priority',
+  'dueDate',
+  'createdDesc',
+  'createdAsc',
+];
+const sortLabels: Record<TaskSort, string> = {
+  priority: 'PRIORITY',
+  dueDate: 'DUE DATE',
+  createdDesc: 'RECENT',
+  createdAsc: 'OLDEST',
+};
 
 export function TaskListScreen({navigation}: Props) {
   const {theme, preference, toggleTheme} = useAppTheme();
@@ -62,39 +89,110 @@ export function TaskListScreen({navigation}: Props) {
     storageError,
     addVoiceTasks,
     toggleTask,
+    undoToggleTask,
     deleteTask,
+    restoreTask,
   } = useTasks();
   const [filter, setFilter] = useState<TaskFilter>('all');
-  const [sort, setSort] = useState<TaskSort>('created');
+  const [sort, setSort] = useState<TaskSort>('createdDesc');
   const [query, setQuery] = useState('');
   const [viewMode, setViewMode] = useState<TaskViewMode>('cards');
+  const [sortOpen, setSortOpen] = useState(false);
   const [voiceOpen, setVoiceOpen] = useState(false);
-  const [createdByVoice, setCreatedByVoice] = useState<string[]>([]);
+  const [suggestedVoiceTasks, setSuggestedVoiceTasks] = useState<string[]>([]);
+  const [notice, setNotice] = useState<SnackbarNotice | null>(null);
 
-  const handleVoiceResult = useCallback(
-    (transcript: string) => {
-      const titles = splitVoiceTasks(transcript);
-      if (titles.length) {
-        addVoiceTasks(titles);
-        setCreatedByVoice(titles);
-      }
-    },
-    [addVoiceTasks],
-  );
-
+  const handleVoiceResult = useCallback((transcript: string) => {
+    setSuggestedVoiceTasks(splitVoiceTasks(transcript));
+    triggerHaptic('success');
+  }, []);
   const voice = useVoiceRecognition(handleVoiceResult);
 
   useEffect(() => {
-    AsyncStorage.getItem(VIEW_MODE_KEY)
-      .then(value => {
-        if (value === 'cards' || value === 'table') {
-          setViewMode(value);
+    Promise.all([
+      AsyncStorage.getItem(VIEW_MODE_KEY),
+      AsyncStorage.getItem(SORT_KEY),
+    ])
+      .then(([storedView, storedSort]) => {
+        if (storedView === 'cards' || storedView === 'table') {
+          setViewMode(storedView);
+        }
+        if (validSorts.includes(storedSort as TaskSort)) {
+          setSort(storedSort as TaskSort);
         }
       })
       .catch(() => undefined);
   }, []);
 
+  const filteredTasks = useMemo(
+    () =>
+      tasks.filter(task => {
+        const matchesFilter =
+          filter === 'all' ||
+          (filter === 'completed' ? task.completed : !task.completed);
+        return matchesFilter && matchesTaskSearch(task, query);
+      }),
+    [filter, query, tasks],
+  );
+  const sections = useMemo(
+    () => organizeTaskSections(filteredTasks, sort),
+    [filteredTasks, sort],
+  );
+  const completedCount = tasks.filter(task => task.completed).length;
+
+  const dismissNotice = useCallback(() => setNotice(null), []);
+  const showUndo = useCallback((message: string, onUndo: () => void) => {
+    setNotice({id: Date.now(), message, onUndo});
+  }, []);
+
+  const handleToggle = useCallback(
+    (task: Task) => {
+      const result = toggleTask(task.id);
+      if (!result) {
+        return;
+      }
+      triggerHaptic('success');
+
+      if (task.completed) {
+        syncTaskReminder(task).catch(() => undefined);
+      } else {
+        cancelTaskReminder(task.id).catch(() => undefined);
+        if (result.generatedTask) {
+          syncTaskReminder(result.generatedTask).catch(() => undefined);
+        }
+      }
+
+      showUndo(task.completed ? 'Task marked active' : 'Task completed', () => {
+        undoToggleTask(result);
+        if (result.generatedTask) {
+          cancelTaskReminder(result.generatedTask.id).catch(() => undefined);
+        }
+        if (!task.completed) {
+          syncTaskReminder(task).catch(() => undefined);
+        }
+      });
+    },
+    [showUndo, toggleTask, undoToggleTask],
+  );
+
+  const handleDelete = useCallback(
+    (task: Task) => {
+      const deleted = deleteTask(task.id);
+      if (!deleted) {
+        return;
+      }
+      cancelTaskReminder(task.id).catch(() => undefined);
+      triggerHaptic();
+      showUndo('Task deleted', () => {
+        restoreTask(deleted);
+        syncTaskReminder(deleted).catch(() => undefined);
+      });
+    },
+    [deleteTask, restoreTask, showUndo],
+  );
+
   const toggleViewMode = () => {
+    triggerHaptic();
     setViewMode(current => {
       const next = current === 'cards' ? 'table' : 'cards';
       AsyncStorage.setItem(VIEW_MODE_KEY, next).catch(() => undefined);
@@ -102,67 +200,33 @@ export function TaskListScreen({navigation}: Props) {
     });
   };
 
-  const visibleTasks = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    const filtered = tasks.filter(task => {
-      const matchesFilter =
-        filter === 'all' ||
-        (filter === 'completed' ? task.completed : !task.completed);
-      const matchesSearch =
-        !normalizedQuery ||
-        task.title.toLowerCase().includes(normalizedQuery) ||
-        task.description?.toLowerCase().includes(normalizedQuery);
-      return matchesFilter && matchesSearch;
-    });
-
-    return filtered.sort((left, right) => {
-      // Keep actionable work visible first, regardless of the selected
-      // secondary sort. Completed tasks move into the group below.
-      if (left.completed !== right.completed) {
-        return Number(left.completed) - Number(right.completed);
-      }
-
-      if (sort === 'dueDate') {
-        if (!left.dueDate) {
-          return 1;
-        }
-        if (!right.dueDate) {
-          return -1;
-        }
-        return left.dueDate.localeCompare(right.dueDate);
-      }
-      return right.createdAt.localeCompare(left.createdAt);
-    });
-  }, [filter, query, sort, tasks]);
-
-  const completedCount = tasks.filter(task => task.completed).length;
-
-  const askToDelete = useCallback(
-    (task: Task) => {
-      Alert.alert(
-        'Delete task?',
-        `“${task.title}” will be permanently removed.`,
-        [
-          {text: 'Cancel', style: 'cancel'},
-          {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: () => deleteTask(task.id),
-          },
-        ],
-      );
-    },
-    [deleteTask],
-  );
+  const changeSort = (value: TaskSort) => {
+    setSort(value);
+    AsyncStorage.setItem(SORT_KEY, value).catch(() => undefined);
+    triggerHaptic();
+  };
 
   const openVoice = () => {
-    setCreatedByVoice([]);
+    setSuggestedVoiceTasks([]);
     setVoiceOpen(true);
+    triggerHaptic();
   };
 
   const closeVoice = () => {
     voice.cancel();
     setVoiceOpen(false);
+    setSuggestedVoiceTasks([]);
+  };
+
+  const confirmVoiceTasks = () => {
+    const validTasks = suggestedVoiceTasks.map(title => title.trim()).filter(Boolean);
+    if (!validTasks.length) {
+      return;
+    }
+    addVoiceTasks(validTasks);
+    triggerHaptic('success');
+    setVoiceOpen(false);
+    setSuggestedVoiceTasks([]);
   };
 
   if (isLoading) {
@@ -171,11 +235,13 @@ export function TaskListScreen({navigation}: Props) {
 
   return (
     <View style={[styles.screen, {backgroundColor: theme.colors.background}]}>
-      <FlatList
+      <SectionList
         contentContainerStyle={styles.listContent}
-        data={visibleTasks}
+        sections={sections}
         keyExtractor={task => task.id}
+        keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
+        stickySectionHeadersEnabled={false}
         ListEmptyComponent={
           <EmptyTasks
             filtered={Boolean(query) || filter !== 'all'}
@@ -223,7 +289,7 @@ export function TaskListScreen({navigation}: Props) {
               <TextInput
                 accessibilityLabel="Search tasks"
                 onChangeText={setQuery}
-                placeholder="Search tasks"
+                placeholder="Search title, tag, category, priority…"
                 placeholderTextColor={theme.colors.textMuted}
                 style={[styles.searchInput, {color: theme.colors.text}]}
                 value={query}
@@ -255,18 +321,10 @@ export function TaskListScreen({navigation}: Props) {
               </View>
               <View style={styles.controlActions}>
                 <IconButton
-                  icon={sort === 'dueDate' ? CalendarClock : ArrowDownUp}
-                  label={
-                    sort === 'dueDate'
-                      ? 'Sort by newest'
-                      : 'Sort by due date'
-                  }
-                  onPress={() =>
-                    setSort(current =>
-                      current === 'created' ? 'dueDate' : 'created',
-                    )
-                  }
-                  selected={sort === 'dueDate'}
+                  icon={ArrowDownUp}
+                  label="Choose task sorting"
+                  onPress={() => setSortOpen(true)}
+                  selected={sort !== 'createdDesc'}
                 />
                 <IconButton
                   icon={viewMode === 'cards' ? Table2 : LayoutList}
@@ -279,32 +337,55 @@ export function TaskListScreen({navigation}: Props) {
               </View>
             </View>
 
-            {visibleTasks.length ? (
-              <Text style={[styles.sectionLabel, {color: theme.colors.textMuted}]}>
-                {visibleTasks.length} {visibleTasks.length === 1 ? 'TASK' : 'TASKS'}
+            {filteredTasks.length ? (
+              <Text style={[styles.totalLabel, {color: theme.colors.textMuted}]}>
+                {filteredTasks.length}{' '}
+                {filteredTasks.length === 1 ? 'TASK' : 'TASKS'} ·{' '}
+                {sortLabels[sort]}
               </Text>
-            ) : null}
-            {visibleTasks.length && viewMode === 'table' ? (
-              <View style={styles.tableHeaderContainer}>
-                <TaskTableHeader />
-              </View>
             ) : null}
           </View>
         }
+        renderSectionHeader={({section}) => (
+          <>
+            <TaskSectionHeader
+              count={section.data.length}
+              sectionKey={section.key}
+              title={section.title}
+            />
+            {viewMode === 'table' ? (
+              <View style={styles.tableHeader}>
+                <TaskTableHeader />
+              </View>
+            ) : null}
+          </>
+        )}
         renderItem={({item}) => {
-          const actions = {
-            onDelete: () => askToDelete(item),
-            onEdit: () => navigation.navigate('TaskForm', {taskId: item.id}),
-            onToggle: () => toggleTask(item.id),
-          };
-
+          const edit = () => navigation.navigate('TaskForm', {taskId: item.id});
+          const remove = () => handleDelete(item);
+          const toggle = () => handleToggle(item);
           return (
             <View style={viewMode === 'cards' ? styles.item : styles.tableItem}>
-              {viewMode === 'cards' ? (
-                <TaskItem {...actions} task={item} />
-              ) : (
-                <TaskTableRow {...actions} task={item} />
-              )}
+              <SwipeActions
+                onComplete={toggle}
+                onDelete={remove}
+                onEdit={edit}>
+                {viewMode === 'cards' ? (
+                  <TaskItem
+                    onDelete={remove}
+                    onEdit={edit}
+                    onToggle={toggle}
+                    task={item}
+                  />
+                ) : (
+                  <TaskTableRow
+                    onDelete={remove}
+                    onEdit={edit}
+                    onToggle={toggle}
+                    task={item}
+                  />
+                )}
+              </SwipeActions>
             </View>
           );
         }}
@@ -333,13 +414,31 @@ export function TaskListScreen({navigation}: Props) {
         </PressableScale>
       </View>
 
+      <UndoSnackbar notice={notice} onDismiss={dismissNotice} />
+      <SortSheet
+        onChange={changeSort}
+        onClose={() => setSortOpen(false)}
+        value={sort}
+        visible={sortOpen}
+      />
       <VoiceInputSheet
-        createdTasks={createdByVoice}
         error={voice.error}
+        onChangeTask={(index, value) =>
+          setSuggestedVoiceTasks(current =>
+            current.map((title, itemIndex) => (itemIndex === index ? value : title)),
+          )
+        }
         onClose={closeVoice}
+        onConfirm={confirmVoiceTasks}
+        onRemoveTask={index =>
+          setSuggestedVoiceTasks(current =>
+            current.filter((_, itemIndex) => itemIndex !== index),
+          )
+        }
         onStart={voice.start}
         onStop={voice.stop}
         state={voice.state}
+        suggestedTasks={suggestedVoiceTasks}
         transcript={voice.transcript}
         visible={voiceOpen}
       />
@@ -369,23 +468,23 @@ const styles = StyleSheet.create({
     fontSize: fontSize.body,
     fontWeight: '800',
   },
-  controls: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-  },
-  controlActions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
   clearSearch: {
     alignItems: 'center',
     borderRadius: radius.pill,
     height: 26,
     justifyContent: 'center',
     width: 26,
+  },
+  controlActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  controls: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    justifyContent: 'space-between',
   },
   eyebrow: {
     fontSize: 9,
@@ -453,21 +552,20 @@ const styles = StyleSheet.create({
     fontSize: fontSize.body,
     paddingVertical: 0,
   },
-  sectionLabel: {
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 1.2,
-    marginTop: spacing.xs,
+  tableHeader: {
+    paddingHorizontal: spacing.xl,
+  },
+  tableItem: {
+    paddingHorizontal: spacing.xl,
   },
   topBar: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  tableHeaderContainer: {
-    marginBottom: -spacing.lg,
-  },
-  tableItem: {
-    paddingHorizontal: spacing.xl,
+  totalLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 1.1,
   },
 });

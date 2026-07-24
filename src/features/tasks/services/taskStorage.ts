@@ -32,6 +32,21 @@ export async function loadTasks(): Promise<Task[]> {
           task.priority === 'high' || task.priority === 'low'
             ? task.priority
             : 'medium',
+        recurrence:
+          task.recurrence === 'daily' ||
+          task.recurrence === 'weekly' ||
+          task.recurrence === 'monthly'
+            ? task.recurrence
+            : 'none',
+        category:
+          typeof task.category === 'string' && task.category.trim()
+            ? task.category.trim()
+            : undefined,
+        tags: Array.isArray(task.tags)
+          ? task.tags.filter(tag => typeof tag === 'string' && tag.trim())
+          : [],
+        reminderAt:
+          typeof task.reminderAt === 'string' ? task.reminderAt : undefined,
       }))
     : [];
 }

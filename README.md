@@ -1,60 +1,69 @@
 # Todo List
 
-A polished, offline-first to-do application built with React Native Community CLI and TypeScript. It supports task management, local persistence, due dates, search and filters, light/dark themes, and Android voice input.
+A polished, offline-first to-do application built with React Native Community CLI and strict TypeScript. It supports task management, local persistence, reminders, recurrence, voice input, organization, search, and accessible light/dark interfaces.
 
 ## Features
 
-- Add tasks with a required title, optional description, and optional due date
-- Edit created tasks without losing their completion state
-- Assign and update Low, Medium, or High task priority
+- Add and edit tasks with a title, optional description, priority, due date, and reminder
 - Mark tasks complete or incomplete
-- Delete tasks with confirmation
-- Persist tasks and theme preference with AsyncStorage
-- Search tasks and filter by all, active, or completed
-- Sort by newest or due date
+- Delete or complete tasks with a temporary Undo snackbar
+- Keep active work organized into Overdue, Today, Upcoming, and No due date sections
+- Keep completed tasks in a separate section below active work
+- Repeat tasks daily, weekly, or monthly
+- Organize work with categories and comma-separated tags
+- Persist tasks, theme, sorting, and view preference with AsyncStorage
+- Sort by priority, due date, recently created, or oldest first
+- Search titles, descriptions, categories, tags, priority, source, status, and date labels
+- Filter by all, active, or completed
 - Switch between detailed card and compact table views
-- Toggle light and dark themes
-- Dictate one or multiple tasks from the animated microphone FAB
-- Split natural speech such as “Buy provisions and call mom” into separate tasks
-- Friendly empty, validation, permission, storage, and speech-error states
-- Small, readable typography and accessible touch targets
+- Swipe right to complete; swipe left to reveal edit and delete actions
+- Expand cards to inspect reminder, recurrence, category, and tag details
+- Toggle persistent light and dark themes
+- Dictate multiple tasks through the animated microphone FAB
+- Review, edit, remove, and explicitly confirm voice-generated tasks before saving
+- Split speech such as “Buy provisions and call mom” into separate tasks
+- Receive subtle haptic feedback for important actions
+- Handle empty, validation, permission, storage, notification, and speech states
 
 ## Technology
 
-- React Native `0.86`
+- React Native `0.86` without Expo
 - React `19`
-- TypeScript with strict mode
+- Strict TypeScript
 - React Navigation native stack
 - AsyncStorage
-- Android `SpeechRecognizer` through a lifecycle-safe native Kotlin module
-- React Native `Animated` and `LayoutAnimation`
+- Native Android `SpeechRecognizer`
+- Native Android `AlarmManager` and notification channels
+- React Native `Animated`, `LayoutAnimation`, and `PanResponder`
 - Jest
 
-No Expo packages are used. Voice recognition uses the Android system speech-recognition service, so the app contains no embedded cloud API key. Depending on the device’s recognition service, speech may be processed on-device or remotely.
+Voice recognition uses the Android system speech service, so no cloud API key is embedded in the app. Depending on the device’s recognition provider, speech may be processed on-device or remotely.
 
 ## Project structure
 
 ```text
 src/
-├── app/
-│   ├── navigation/          # Root navigator and route configuration
-│   └── App.tsx              # Application composition
-├── components/              # Reusable, app-wide UI primitives
-├── features/
-│   └── tasks/
-│       ├── components/      # Task-specific reusable UI
-│       ├── context/         # Task state and actions
-│       ├── screens/         # Task List and reusable Task Form screens
-│       ├── services/        # Task persistence
-│       └── types/           # Task domain models
-├── services/
-│   └── voice/               # Voice bridge, hook, and presentation
-├── theme/                   # Design tokens, themes, and provider
-├── types/                   # Shared application types
-└── utils/                   # Pure tested helpers
+|-- app/
+|   |-- navigation/          # Typed route configuration
+|   `-- App.tsx              # Application composition
+|-- components/              # Reusable global UI primitives
+|-- features/
+|   `-- tasks/
+|       |-- components/      # Task-specific reusable UI
+|       |-- context/         # Task state and actions
+|       |-- screens/         # Task List and reusable Task Form
+|       |-- services/        # Task persistence
+|       |-- types/           # Task domain models
+|       `-- utils/           # Search, sorting, and sectioning
+|-- services/
+|   |-- reminders/           # Android reminder bridge
+|   `-- voice/               # Voice bridge, hook, and review UI
+|-- theme/                   # Tokens, themes, and provider
+|-- types/                   # Shared navigation types
+`-- utils/                   # Tested date, speech, and haptic helpers
 ```
 
-Native Android voice code lives under:
+Native Android voice and reminder code lives in:
 
 ```text
 android/app/src/main/java/com/akindelefelix/todolist/
@@ -65,13 +74,13 @@ android/app/src/main/java/com/akindelefelix/todolist/
 - Node.js `22.11` or newer
 - JDK 17
 - Android Studio and Android SDK
-- An Android emulator with Google speech services, or a physical Android device
+- Android emulator with Google speech services, or a physical Android device
 
-Follow the official React Native [Android environment setup](https://reactnative.dev/docs/set-up-your-environment) before running the project.
+Complete the official React Native [Android environment setup](https://reactnative.dev/docs/set-up-your-environment) first.
 
 ## Install and run
 
-This repository uses npm.
+This repository uses npm:
 
 ```powershell
 npm.cmd install
@@ -84,7 +93,7 @@ In a second terminal:
 npm.cmd run android
 ```
 
-On shells without the Windows PowerShell script restriction, `npm` can be used instead of `npm.cmd`.
+On shells without the Windows PowerShell script restriction, use `npm` instead of `npm.cmd`.
 
 ## Quality checks
 
@@ -105,30 +114,23 @@ The APK is generated at `android/app/build/outputs/apk/debug/app-debug.apk`.
 
 ## Voice input
 
-1. Tap the purple microphone FAB on the Task List screen.
-2. Allow microphone access the first time.
+1. Tap the purple microphone FAB.
+2. Allow microphone access on first use.
 3. Tap **Start listening** and dictate one or more actions.
 4. Tap **Finish speaking**, or pause naturally.
-5. Review the tasks that were added.
+5. Review the detected tasks.
+6. Edit or remove incorrect results, then confirm.
 
-The app requests microphone permission only when voice input is used. Android 11+ speech-service discovery is declared in the manifest, and the native recognizer is destroyed after results, errors, cancellation, or React teardown.
+Android 11+ speech-service discovery is declared in the manifest. The recognizer is destroyed after results, errors, cancellation, or React teardown.
+
+## Reminders and recurrence
+
+Choose a future reminder date and time in the task form. Android 13+ requests notification permission only when a reminder is scheduled. Editing, completing, or deleting a task updates or cancels its pending reminder.
+
+Completing a daily, weekly, or monthly task creates its next occurrence. Undoing the completion also removes that generated occurrence.
 
 ## Screenshots
 
-Real emulator/device screenshots belong in [`screenshots/`](./screenshots). Capture the required states using the filenames documented in [`screenshots/README.md`](./screenshots/README.md), then replace this section with:
+Real emulator/device screenshots belong in [`screenshots/`](./screenshots). Capture the required states listed in [`screenshots/README.md`](./screenshots/README.md), then embed them here before submission.
 
-```md
-| Empty state | Task list |
-| --- | --- |
-| ![Empty state](screenshots/01-empty-state.png) | ![Task list](screenshots/02-task-list.png) |
-
-| Add task | Voice listening |
-| --- | --- |
-| ![Add task](screenshots/03-add-task.png) | ![Voice listening](screenshots/04-voice-listening.png) |
-
-| Voice results | Dark theme |
-| --- | --- |
-| ![Voice results](screenshots/05-voice-results.png) | ![Dark theme](screenshots/06-dark-theme.png) |
-```
-
-Screenshots must be captured from the actual build; mockups are intentionally not included.
+Screenshots must come from the running build; mockups are intentionally not included.

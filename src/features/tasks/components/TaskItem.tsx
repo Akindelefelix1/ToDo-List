@@ -1,12 +1,17 @@
-import React, {useEffect, useRef} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {Animated, LayoutAnimation, StyleSheet, Text, View} from 'react-native';
 import {
   CalendarDays,
+  Bell,
   Check,
+  ChevronDown,
+  ChevronUp,
   Clock3,
   Keyboard,
   Mic,
   Pencil,
+  Repeat2,
+  Tags,
   Trash2,
 } from 'lucide-react-native';
 
@@ -15,6 +20,7 @@ import {useAppTheme} from '../../../theme/ThemeProvider';
 import {fontSize, radius, spacing} from '../../../theme/tokens';
 import {
   formatCreatedAt,
+  formatDateTime,
   formatDueDate,
   isOverdue,
 } from '../../../utils/date';
@@ -31,6 +37,7 @@ type Props = {
 
 export function TaskItem({task, onToggle, onEdit, onDelete}: Props) {
   const {theme} = useAppTheme();
+  const [expanded, setExpanded] = useState(false);
   const entrance = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -121,7 +128,7 @@ export function TaskItem({task, onToggle, onEdit, onDelete}: Props) {
           </View>
           {task.description ? (
             <Text
-              numberOfLines={2}
+              numberOfLines={expanded ? undefined : 2}
               style={[
                 styles.description,
                 {
@@ -155,9 +162,49 @@ export function TaskItem({task, onToggle, onEdit, onDelete}: Props) {
               {formatCreatedAt(task.createdAt)}
             </Text>
           </View>
+          {expanded ? (
+            <View style={styles.details}>
+              {task.reminderAt ? (
+                <View style={styles.meta}>
+                  <Bell color={theme.colors.primary} size={12} />
+                  <Text style={[styles.detailText, {color: theme.colors.textMuted}]}>
+                    Reminder {formatDateTime(task.reminderAt)}
+                  </Text>
+                </View>
+              ) : null}
+              {task.recurrence !== 'none' ? (
+                <View style={styles.meta}>
+                  <Repeat2 color={theme.colors.primary} size={12} />
+                  <Text style={[styles.detailText, {color: theme.colors.textMuted}]}>
+                    Repeats {task.recurrence}
+                  </Text>
+                </View>
+              ) : null}
+              {task.category || task.tags.length ? (
+                <View style={styles.meta}>
+                  <Tags color={theme.colors.primary} size={12} />
+                  <Text style={[styles.detailText, {color: theme.colors.textMuted}]}>
+                    {[task.category, ...task.tags].filter(Boolean).join(' · ')}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
         </View>
 
         <View style={styles.actions}>
+          <PressableScale
+            accessibilityLabel={expanded ? 'Collapse task details' : 'Expand task details'}
+            accessibilityState={{expanded}}
+            onPress={() => setExpanded(value => !value)}
+            hitSlop={8}
+            style={styles.actionButton}>
+            {expanded ? (
+              <ChevronUp color={theme.colors.textMuted} size={17} />
+            ) : (
+              <ChevronDown color={theme.colors.textMuted} size={17} />
+            )}
+          </PressableScale>
           <PressableScale
             accessibilityLabel={`Edit ${task.title}`}
             onPress={onEdit}
@@ -220,6 +267,15 @@ const styles = StyleSheet.create({
   description: {
     fontSize: fontSize.caption,
     lineHeight: 16,
+  },
+  details: {
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+  },
+  detailText: {
+    flex: 1,
+    fontSize: 10,
+    fontWeight: '600',
   },
   dueDate: {
     fontSize: fontSize.caption,

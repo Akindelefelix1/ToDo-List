@@ -10,17 +10,27 @@ import {
 } from 'react-native';
 import {DateTimePickerAndroid} from '@react-native-community/datetimepicker';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
-import {ArrowLeft, CalendarDays, Check, X} from 'lucide-react-native';
+import {
+  ArrowLeft,
+  Bell,
+  CalendarDays,
+  Check,
+  Repeat2,
+  Tags,
+  X,
+} from 'lucide-react-native';
 
 import {IconButton} from '../../../components/IconButton';
 import {PressableScale} from '../../../components/PressableScale';
+import {syncTaskReminder} from '../../../services/reminders/taskReminders';
 import {useAppTheme} from '../../../theme/ThemeProvider';
 import {fontSize, radius, spacing} from '../../../theme/tokens';
 import type {RootStackParamList} from '../../../types/navigation';
 import {addDays, formatDueDate, startOfDay} from '../../../utils/date';
+import {triggerHaptic} from '../../../utils/haptics';
 
 import {useTasks} from '../context/TaskProvider';
-import type {TaskPriority} from '../types/task';
+import type {TaskPriority, TaskRecurrence} from '../types/task';
 import {PriorityBadge} from '../components/PriorityBadge';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TaskForm'>;
@@ -41,6 +51,14 @@ export function TaskFormScreen({navigation, route}: Props) {
   const [priority, setPriority] = useState<TaskPriority>(
     existingTask?.priority ?? 'medium',
   );
+  const [reminderAt, setReminderAt] = useState<Date | null>(
+    existingTask?.reminderAt ? new Date(existingTask.reminderAt) : null,
+  );
+  const [recurrence, setRecurrence] = useState<TaskRecurrence>(
+    existingTask?.recurrence ?? 'none',
+  );
+  const [category, setCategory] = useState(existingTask?.category ?? '');
+  const [tags, setTags] = useState(existingTask?.tags.join(', ') ?? '');
   const [titleError, setTitleError] = useState('');
 
   const canSave = title.trim().length > 0;
@@ -64,12 +82,24 @@ export function TaskFormScreen({navigation, route}: Props) {
       description,
       dueDate: dueDate?.toISOString(),
       priority,
+      reminderAt: reminderAt?.toISOString(),
+      recurrence,
+      category,
+      tags: [...new Set(tags.split(',').map(tag => tag.trim()).filter(Boolean))],
     };
+    let savedTaskId: string;
     if (existingTask) {
       updateTask(existingTask.id, changes);
+      savedTaskId = existingTask.id;
     } else {
-      addTask(changes);
+      savedTaskId = addTask(changes).id;
     }
+    syncTaskReminder({
+      id: savedTaskId,
+      title: title.trim(),
+      reminderAt: changes.reminderAt,
+    }).catch(() => undefined);
+    triggerHaptic('success');
     navigation.goBack();
   };
 
@@ -82,6 +112,36 @@ export function TaskFormScreen({navigation, route}: Props) {
         if (event.type === 'set' && selectedDate) {
           setDueDate(startOfDay(selectedDate));
         }
+      },
+    });
+  };
+
+  const openReminderPicker = () => {
+    const initial = reminderAt ?? new Date(Date.now() + 60 * 60 * 1000);
+    DateTimePickerAndroid.open({
+      value: initial,
+      minimumDate: new Date(),
+      mode: 'date',
+      onChange: (dateEvent, selectedDate) => {
+        if (dateEvent.type !== 'set' || !selectedDate) {
+          return;
+        }
+        DateTimePickerAndroid.open({
+          value: initial,
+          mode: 'time',
+          onChange: (timeEvent, selectedTime) => {
+            if (timeEvent.type === 'set' && selectedTime) {
+              const combined = new Date(selectedDate);
+              combined.setHours(
+                selectedTime.getHours(),
+                selectedTime.getMinutes(),
+                0,
+                0,
+              );
+              setReminderAt(combined);
+            }
+          },
+        });
       },
     });
   };
@@ -266,6 +326,108 @@ export function TaskFormScreen({navigation, route}: Props) {
             ) : null}
           </PressableScale>
         </View>
+
+        <View style={styles.field}>
+          <Text style={[styles.label, {color: theme.colors.text}]}>Reminder</Text>
+          <PressableScale
+            onPress={openReminderPicker}
+            style={[
+              styles.customDate,
+              {backgroundColor: theme.colors.surface, borderColor: theme.colors.border},
+            ]}>
+            <Bell color={theme.colors.primary} size={17} />
+            <Text style={[styles.customDateText, {color: theme.colors.text}]}>
+              {reminderAt
+                ? reminderAt.toLocaleString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                  })
+                : 'Choose reminder date and time'}
+            </Text>
+            {reminderAt ? (
+              <PressableScale
+                accessibilityLabel="Clear reminder"
+                hitSlop={8}
+                onPress={() => setReminderAt(null)}
+                style={styles.clearDate}>
+                <X color={theme.colors.textMuted} size={16} />
+              </PressableScale>
+            ) : null}
+          </PressableScale>
+        </View>
+
+        <View style={styles.field}>
+          <View style={styles.labelWithIcon}>
+            <Repeat2 color={theme.colors.primary} size={15} />
+            <Text style={[styles.label, {color: theme.colors.text}]}>Repeat</Text>
+          </View>
+          <View style={styles.dateChips}>
+            {(['none', 'daily', 'weekly', 'monthly'] as const).map(option => {
+              const selected = recurrence === option;
+              return (
+                <PressableScale
+                  accessibilityLabel={`${option} recurrence`}
+                  accessibilityState={{selected}}
+                  key={option}
+                  onPress={() => setRecurrence(option)}
+                  style={[
+                    styles.dateChip,
+                    {
+                      backgroundColor: selected
+                        ? theme.colors.primarySoft
+                        : theme.colors.surface,
+                      borderColor: selected
+                        ? theme.colors.primary
+                        : theme.colors.border,
+                    },
+                  ]}>
+                  <Text
+                    style={[
+                      styles.dateChipText,
+                      {
+                        color: selected
+                          ? theme.colors.primary
+                          : theme.colors.textMuted,
+                      },
+                      styles.capitalize,
+                    ]}>
+                    {option}
+                  </Text>
+                </PressableScale>
+              );
+            })}
+          </View>
+        </View>
+
+        <View style={styles.field}>
+          <View style={styles.labelWithIcon}>
+            <Tags color={theme.colors.primary} size={15} />
+            <Text style={[styles.label, {color: theme.colors.text}]}>
+              Organization
+            </Text>
+          </View>
+          <TextInput
+            accessibilityLabel="Task category"
+            maxLength={30}
+            onChangeText={setCategory}
+            placeholder="Category, e.g. Work"
+            placeholderTextColor={theme.colors.textMuted}
+            style={inputStyle}
+            value={category}
+          />
+          <TextInput
+            accessibilityLabel="Task tags"
+            autoCapitalize="none"
+            maxLength={100}
+            onChangeText={setTags}
+            placeholder="Tags separated by commas"
+            placeholderTextColor={theme.colors.textMuted}
+            style={inputStyle}
+            value={tags}
+          />
+        </View>
       </ScrollView>
 
       <View
@@ -288,6 +450,9 @@ export function TaskFormScreen({navigation, route}: Props) {
 }
 
 const styles = StyleSheet.create({
+  capitalize: {
+    textTransform: 'capitalize',
+  },
   clearDate: {
     alignItems: 'center',
     height: 28,
@@ -385,6 +550,11 @@ const styles = StyleSheet.create({
   label: {
     fontSize: fontSize.body,
     fontWeight: '800',
+  },
+  labelWithIcon: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
   },
   labelRow: {
     alignItems: 'center',
