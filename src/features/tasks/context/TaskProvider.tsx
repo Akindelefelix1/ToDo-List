@@ -14,6 +14,7 @@ import type {NewTask, Task} from '../types/task';
 type TaskAction =
   | {type: 'hydrate'; tasks: Task[]}
   | {type: 'add'; tasks: Task[]}
+  | {type: 'update'; task: Task}
   | {type: 'toggle'; id: string}
   | {type: 'delete'; id: string};
 
@@ -23,6 +24,7 @@ type TaskContextValue = {
   storageError: string | null;
   addTask: (task: NewTask) => Task;
   addTasks: (titles: string[]) => Task[];
+  updateTask: (id: string, changes: NewTask) => void;
   toggleTask: (id: string) => void;
   deleteTask: (id: string) => void;
 };
@@ -35,6 +37,8 @@ function reducer(state: Task[], action: TaskAction): Task[] {
       return action.tasks;
     case 'add':
       return [...action.tasks, ...state];
+    case 'update':
+      return state.map(task => (task.id === action.task.id ? action.task : task));
     case 'toggle':
       return state.map(task =>
         task.id === action.id ? {...task, completed: !task.completed} : task,
@@ -88,6 +92,25 @@ export function TaskProvider({children}: React.PropsWithChildren) {
     return created;
   }, []);
 
+  const updateTask = useCallback(
+    (id: string, changes: NewTask) => {
+      const existing = tasks.find(task => task.id === id);
+      if (!existing) {
+        return;
+      }
+      dispatch({
+        type: 'update',
+        task: {
+          ...existing,
+          title: changes.title.trim(),
+          description: changes.description?.trim() || undefined,
+          dueDate: changes.dueDate,
+        },
+      });
+    },
+    [tasks],
+  );
+
   const toggleTask = useCallback((id: string) => {
     dispatch({type: 'toggle', id});
   }, []);
@@ -103,10 +126,20 @@ export function TaskProvider({children}: React.PropsWithChildren) {
       storageError,
       addTask,
       addTasks,
+      updateTask,
       toggleTask,
       deleteTask,
     }),
-    [addTask, addTasks, deleteTask, isLoading, storageError, tasks, toggleTask],
+    [
+      addTask,
+      addTasks,
+      deleteTask,
+      isLoading,
+      storageError,
+      tasks,
+      toggleTask,
+      updateTask,
+    ],
   );
 
   return <TaskContext.Provider value={value}>{children}</TaskContext.Provider>;

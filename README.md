@@ -5,6 +5,7 @@ A polished, offline-first to-do application built with React Native Community CL
 ## Features
 
 - Add tasks with a required title, optional description, and optional due date
+- Edit created tasks without losing their completion state
 - Mark tasks complete or incomplete
 - Delete tasks with confirmation
 - Persist tasks and theme preference with AsyncStorage
@@ -41,7 +42,7 @@ src/
 │   └── tasks/
 │       ├── components/      # Task-specific reusable UI
 │       ├── context/         # Task state and actions
-│       ├── screens/         # Task List and Add Task screens
+│       ├── screens/         # Task List and reusable Task Form screens
 │       ├── services/        # Task persistence
 │       └── types/           # Task domain models
 ├── services/

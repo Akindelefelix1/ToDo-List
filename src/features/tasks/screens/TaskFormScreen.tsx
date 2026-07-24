@@ -21,14 +21,21 @@ import {addDays, formatDueDate, startOfDay} from '../../../utils/date';
 
 import {useTasks} from '../context/TaskProvider';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'AddTask'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'TaskForm'>;
 
-export function AddTaskScreen({navigation}: Props) {
+export function TaskFormScreen({navigation, route}: Props) {
   const {theme} = useAppTheme();
-  const {addTask} = useTasks();
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [dueDate, setDueDate] = useState<Date | null>(null);
+  const {tasks, addTask, updateTask} = useTasks();
+  const taskId = route.params?.taskId;
+  const existingTask = taskId ? tasks.find(task => task.id === taskId) : undefined;
+  const isEditing = Boolean(existingTask);
+  const [title, setTitle] = useState(existingTask?.title ?? '');
+  const [description, setDescription] = useState(
+    existingTask?.description ?? '',
+  );
+  const [dueDate, setDueDate] = useState<Date | null>(
+    existingTask?.dueDate ? new Date(existingTask.dueDate) : null,
+  );
   const [titleError, setTitleError] = useState('');
 
   const canSave = title.trim().length > 0;
@@ -46,11 +53,16 @@ export function AddTaskScreen({navigation}: Props) {
       setTitleError('Please enter a task title.');
       return;
     }
-    addTask({
+    const changes = {
       title,
       description,
       dueDate: dueDate?.toISOString(),
-    });
+    };
+    if (existingTask) {
+      updateTask(existingTask.id, changes);
+    } else {
+      addTask(changes);
+    }
     navigation.goBack();
   };
 
@@ -82,7 +94,9 @@ export function AddTaskScreen({navigation}: Props) {
       style={[styles.screen, {backgroundColor: theme.colors.background}]}>
       <View style={styles.header}>
         <IconButton icon={ArrowLeft} label="Go back" onPress={navigation.goBack} />
-        <Text style={[styles.headerTitle, {color: theme.colors.text}]}>New task</Text>
+        <Text style={[styles.headerTitle, {color: theme.colors.text}]}>
+          {isEditing ? 'Edit task' : 'New task'}
+        </Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -91,13 +105,15 @@ export function AddTaskScreen({navigation}: Props) {
         keyboardShouldPersistTaps="handled">
         <View>
           <Text style={[styles.eyebrow, {color: theme.colors.primary}]}>
-            CAPTURE THE NEXT STEP
+            {isEditing ? 'REFINE THE DETAILS' : 'CAPTURE THE NEXT STEP'}
           </Text>
           <Text style={[styles.heading, {color: theme.colors.text}]}>
-            What needs doing?
+            {isEditing ? 'Update your task.' : 'What needs doing?'}
           </Text>
           <Text style={[styles.subheading, {color: theme.colors.textMuted}]}>
-            Keep it clear and actionable.
+            {isEditing
+              ? 'Keep the details accurate and useful.'
+              : 'Keep it clear and actionable.'}
           </Text>
         </View>
 
@@ -223,7 +239,9 @@ export function AddTaskScreen({navigation}: Props) {
           onPress={save}
           style={[styles.saveButton, {backgroundColor: theme.colors.primary}]}>
           <Check color="#FFFFFF" size={18} strokeWidth={3} />
-          <Text style={styles.saveLabel}>Create task</Text>
+          <Text style={styles.saveLabel}>
+            {isEditing ? 'Save changes' : 'Create task'}
+          </Text>
         </PressableScale>
       </View>
     </KeyboardAvoidingView>

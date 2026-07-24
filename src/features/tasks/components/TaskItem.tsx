@@ -1,6 +1,6 @@
 import React, {useEffect, useRef} from 'react';
 import {Animated, LayoutAnimation, StyleSheet, Text, View} from 'react-native';
-import {CalendarDays, Check, Trash2} from 'lucide-react-native';
+import {CalendarDays, Check, Pencil, Trash2} from 'lucide-react-native';
 
 import {PressableScale} from '../../../components/PressableScale';
 import {useAppTheme} from '../../../theme/ThemeProvider';
@@ -12,10 +12,11 @@ import type {Task} from '../types/task';
 type Props = {
   task: Task;
   onToggle: () => void;
+  onEdit: () => void;
   onDelete: () => void;
 };
 
-export function TaskItem({task, onToggle, onDelete}: Props) {
+export function TaskItem({task, onToggle, onEdit, onDelete}: Props) {
   const {theme} = useAppTheme();
   const entrance = useRef(new Animated.Value(0)).current;
 
@@ -118,13 +119,22 @@ export function TaskItem({task, onToggle, onDelete}: Props) {
           ) : null}
         </View>
 
-        <PressableScale
-          accessibilityLabel={`Delete ${task.title}`}
-          onPress={onDelete}
-          hitSlop={8}
-          style={styles.deleteButton}>
-          <Trash2 color={theme.colors.textMuted} size={17} />
-        </PressableScale>
+        <View style={styles.actions}>
+          <PressableScale
+            accessibilityLabel={`Edit ${task.title}`}
+            onPress={onEdit}
+            hitSlop={8}
+            style={styles.actionButton}>
+            <Pencil color={theme.colors.primary} size={16} />
+          </PressableScale>
+          <PressableScale
+            accessibilityLabel={`Delete ${task.title}`}
+            onPress={onDelete}
+            hitSlop={8}
+            style={styles.actionButton}>
+            <Trash2 color={theme.colors.textMuted} size={17} />
+          </PressableScale>
+        </View>
       </View>
     </Animated.View>
   );
@@ -155,11 +165,15 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacing.xs,
   },
-  deleteButton: {
+  actionButton: {
     alignItems: 'center',
     height: 28,
     justifyContent: 'center',
     width: 28,
+  },
+  actions: {
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   description: {
     fontSize: fontSize.caption,

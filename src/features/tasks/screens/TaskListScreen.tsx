@@ -86,6 +86,12 @@ export function TaskListScreen({navigation}: Props) {
     });
 
     return filtered.sort((left, right) => {
+      // Keep actionable work visible first, regardless of the selected
+      // secondary sort. Completed tasks move into the group below.
+      if (left.completed !== right.completed) {
+        return Number(left.completed) - Number(right.completed);
+      }
+
       if (sort === 'dueDate') {
         if (!left.dueDate) {
           return 1;
@@ -143,7 +149,7 @@ export function TaskListScreen({navigation}: Props) {
         ListEmptyComponent={
           <EmptyTasks
             filtered={Boolean(query) || filter !== 'all'}
-            onAdd={() => navigation.navigate('AddTask')}
+            onAdd={() => navigation.navigate('TaskForm')}
           />
         }
         ListHeaderComponent={
@@ -230,6 +236,7 @@ export function TaskListScreen({navigation}: Props) {
           <View style={styles.item}>
             <TaskItem
               onDelete={() => askToDelete(item)}
+              onEdit={() => navigation.navigate('TaskForm', {taskId: item.id})}
               onToggle={() => toggleTask(item.id)}
               task={item}
             />
@@ -241,7 +248,7 @@ export function TaskListScreen({navigation}: Props) {
       <View style={styles.actions}>
         <PressableScale
           accessibilityLabel="Add task"
-          onPress={() => navigation.navigate('AddTask')}
+          onPress={() => navigation.navigate('TaskForm')}
           style={[
             styles.addButton,
             {
