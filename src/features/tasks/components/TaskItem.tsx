@@ -2,10 +2,10 @@ import React, {useEffect, useRef} from 'react';
 import {Animated, LayoutAnimation, StyleSheet, Text, View} from 'react-native';
 import {CalendarDays, Check, Trash2} from 'lucide-react-native';
 
-import {PressableScale} from '@/components/PressableScale';
-import {useAppTheme} from '@/theme/ThemeProvider';
-import {fontSize, radius, spacing} from '@/theme/tokens';
-import {formatDueDate, isOverdue} from '@/utils/date';
+import {PressableScale} from '../../../components/PressableScale';
+import {useAppTheme} from '../../../theme/ThemeProvider';
+import {fontSize, radius, spacing} from '../../../theme/tokens';
+import {formatDueDate, isOverdue} from '../../../utils/date';
 
 import type {Task} from '../types/task';
 

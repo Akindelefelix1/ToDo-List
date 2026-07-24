@@ -1,9 +1,9 @@
 import React from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 
-import {AddTaskScreen} from '@/features/tasks/screens/AddTaskScreen';
-import {TaskListScreen} from '@/features/tasks/screens/TaskListScreen';
-import type {RootStackParamList} from '@/types/navigation';
+import {AddTaskScreen} from '../../features/tasks/screens/AddTaskScreen';
+import {TaskListScreen} from '../../features/tasks/screens/TaskListScreen';
+import type {RootStackParamList} from '../../types/navigation';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 

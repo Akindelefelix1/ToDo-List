@@ -1,8 +1,8 @@
 import React from 'react';
 import {StyleSheet, Text} from 'react-native';
 
-import {useAppTheme} from '@/theme/ThemeProvider';
-import {fontSize, radius, spacing} from '@/theme/tokens';
+import {useAppTheme} from '../theme/ThemeProvider';
+import {fontSize, radius, spacing} from '../theme/tokens';
 
 import {PressableScale} from './PressableScale';
 

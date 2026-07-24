@@ -1,8 +1,8 @@
 import React from 'react';
 import {ActivityIndicator, StyleSheet, Text, View} from 'react-native';
 
-import {useAppTheme} from '@/theme/ThemeProvider';
-import {fontSize, spacing} from '@/theme/tokens';
+import {useAppTheme} from '../theme/ThemeProvider';
+import {fontSize, spacing} from '../theme/tokens';
 
 export function LoadingView() {
   const {theme} = useAppTheme();

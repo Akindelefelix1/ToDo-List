@@ -2,9 +2,9 @@ import React from 'react';
 import {StyleSheet, Text, View} from 'react-native';
 import {ClipboardCheck} from 'lucide-react-native';
 
-import {PressableScale} from '@/components/PressableScale';
-import {useAppTheme} from '@/theme/ThemeProvider';
-import {fontSize, radius, spacing} from '@/theme/tokens';
+import {PressableScale} from '../../../components/PressableScale';
+import {useAppTheme} from '../../../theme/ThemeProvider';
+import {fontSize, radius, spacing} from '../../../theme/tokens';
 
 type Props = {
   filtered: boolean;

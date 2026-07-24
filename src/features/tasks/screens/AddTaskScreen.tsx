@@ -12,12 +12,12 @@ import {DateTimePickerAndroid} from '@react-native-community/datetimepicker';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {ArrowLeft, CalendarDays, Check, X} from 'lucide-react-native';
 
-import {IconButton} from '@/components/IconButton';
-import {PressableScale} from '@/components/PressableScale';
-import {useAppTheme} from '@/theme/ThemeProvider';
-import {fontSize, radius, spacing} from '@/theme/tokens';
-import type {RootStackParamList} from '@/types/navigation';
-import {addDays, formatDueDate, startOfDay} from '@/utils/date';
+import {IconButton} from '../../../components/IconButton';
+import {PressableScale} from '../../../components/PressableScale';
+import {useAppTheme} from '../../../theme/ThemeProvider';
+import {fontSize, radius, spacing} from '../../../theme/tokens';
+import type {RootStackParamList} from '../../../types/navigation';
+import {addDays, formatDueDate, startOfDay} from '../../../utils/date';
 
 import {useTasks} from '../context/TaskProvider';
 

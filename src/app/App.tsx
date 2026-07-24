@@ -3,9 +3,9 @@ import {NavigationContainer} from '@react-navigation/native';
 import {StatusBar, StyleSheet} from 'react-native';
 import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
 
-import {TaskProvider} from '@/features/tasks/context/TaskProvider';
-import {ThemeProvider, useAppTheme} from '@/theme/ThemeProvider';
-import {toNavigationTheme} from '@/theme/theme';
+import {TaskProvider} from '../features/tasks/context/TaskProvider';
+import {ThemeProvider, useAppTheme} from '../theme/ThemeProvider';
+import {toNavigationTheme} from '../theme/theme';
 
 import {RootNavigator} from './navigation/RootNavigator';
 

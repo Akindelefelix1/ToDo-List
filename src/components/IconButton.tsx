@@ -2,8 +2,8 @@ import React from 'react';
 import {StyleSheet} from 'react-native';
 import type {LucideIcon} from 'lucide-react-native';
 
-import {useAppTheme} from '@/theme/ThemeProvider';
-import {radius} from '@/theme/tokens';
+import {useAppTheme} from '../theme/ThemeProvider';
+import {radius} from '../theme/tokens';
 
 import {PressableScale} from './PressableScale';
 

@@ -18,16 +18,16 @@ import {
   Sun,
 } from 'lucide-react-native';
 
-import {Chip} from '@/components/Chip';
-import {IconButton} from '@/components/IconButton';
-import {LoadingView} from '@/components/LoadingView';
-import {PressableScale} from '@/components/PressableScale';
-import {VoiceInputSheet} from '@/services/voice/VoiceInputSheet';
-import {useVoiceRecognition} from '@/services/voice/useVoiceRecognition';
-import {useAppTheme} from '@/theme/ThemeProvider';
-import {fontSize, radius, spacing} from '@/theme/tokens';
-import type {RootStackParamList} from '@/types/navigation';
-import {splitVoiceTasks} from '@/utils/splitVoiceTasks';
+import {Chip} from '../../../components/Chip';
+import {IconButton} from '../../../components/IconButton';
+import {LoadingView} from '../../../components/LoadingView';
+import {PressableScale} from '../../../components/PressableScale';
+import {VoiceInputSheet} from '../../../services/voice/VoiceInputSheet';
+import {useVoiceRecognition} from '../../../services/voice/useVoiceRecognition';
+import {useAppTheme} from '../../../theme/ThemeProvider';
+import {fontSize, radius, spacing} from '../../../theme/tokens';
+import type {RootStackParamList} from '../../../types/navigation';
+import {splitVoiceTasks} from '../../../utils/splitVoiceTasks';
 
 import {EmptyTasks} from '../components/EmptyTasks';
 import {TaskItem} from '../components/TaskItem';

@@ -2,8 +2,8 @@ import React, {useEffect, useRef} from 'react';
 import {Animated, StyleSheet, Text, View} from 'react-native';
 import {CheckCircle2} from 'lucide-react-native';
 
-import {useAppTheme} from '@/theme/ThemeProvider';
-import {fontSize, radius, spacing} from '@/theme/tokens';
+import {useAppTheme} from '../../../theme/ThemeProvider';
+import {fontSize, radius, spacing} from '../../../theme/tokens';
 
 type Props = {
   completed: number;
