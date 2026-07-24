@@ -1,97 +1,131 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# Todo List
 
-# Getting Started
+A polished, offline-first to-do application built with React Native Community CLI and TypeScript. It supports task management, local persistence, due dates, search and filters, light/dark themes, and Android voice input.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## Features
 
-## Step 1: Start Metro
+- Add tasks with a required title, optional description, and optional due date
+- Mark tasks complete or incomplete
+- Delete tasks with confirmation
+- Persist tasks and theme preference with AsyncStorage
+- Search tasks and filter by all, active, or completed
+- Sort by newest or due date
+- Toggle light and dark themes
+- Dictate one or multiple tasks from the animated microphone FAB
+- Split natural speech such as “Buy provisions and call mom” into separate tasks
+- Friendly empty, validation, permission, storage, and speech-error states
+- Small, readable typography and accessible touch targets
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+## Technology
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+- React Native `0.86`
+- React `19`
+- TypeScript with strict mode
+- React Navigation native stack
+- AsyncStorage
+- Android `SpeechRecognizer` through a lifecycle-safe native Kotlin module
+- React Native `Animated` and `LayoutAnimation`
+- Jest
 
-```sh
-# Using npm
-npm start
+No Expo packages are used. Voice recognition uses the Android system speech-recognition service, so the app contains no embedded cloud API key. Depending on the device’s recognition service, speech may be processed on-device or remotely.
 
-# OR using Yarn
-yarn start
+## Project structure
+
+```text
+src/
+├── app/
+│   ├── navigation/          # Root navigator and route configuration
+│   └── App.tsx              # Application composition
+├── components/              # Reusable, app-wide UI primitives
+├── features/
+│   └── tasks/
+│       ├── components/      # Task-specific reusable UI
+│       ├── context/         # Task state and actions
+│       ├── screens/         # Task List and Add Task screens
+│       ├── services/        # Task persistence
+│       └── types/           # Task domain models
+├── services/
+│   └── voice/               # Voice bridge, hook, and presentation
+├── theme/                   # Design tokens, themes, and provider
+├── types/                   # Shared application types
+└── utils/                   # Pure tested helpers
 ```
 
-## Step 2: Build and run your app
+Native Android voice code lives under:
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
+```text
+android/app/src/main/java/com/akindelefelix/todolist/
 ```
 
-### iOS
+## Prerequisites
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+- Node.js `22.11` or newer
+- JDK 17
+- Android Studio and Android SDK
+- An Android emulator with Google speech services, or a physical Android device
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+Follow the official React Native [Android environment setup](https://reactnative.dev/docs/set-up-your-environment) before running the project.
 
-```sh
-bundle install
+## Install and run
+
+This repository uses npm.
+
+```powershell
+npm.cmd install
+npm.cmd start
 ```
 
-Then, and every time you update your native dependencies, run:
+In a second terminal:
 
-```sh
-bundle exec pod install
+```powershell
+npm.cmd run android
 ```
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+On shells without the Windows PowerShell script restriction, `npm` can be used instead of `npm.cmd`.
 
-```sh
-# Using npm
-npm run ios
+## Quality checks
 
-# OR using Yarn
-yarn ios
+```powershell
+npm.cmd run typecheck
+npm.cmd run lint
+npm.cmd test -- --runInBand
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+Build a debug APK:
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+```powershell
+cd android
+.\gradlew.bat assembleDebug
+```
 
-## Step 3: Modify your app
+The APK is generated at `android/app/build/outputs/apk/debug/app-debug.apk`.
 
-Now that you have successfully run the app, let's make changes!
+## Voice input
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+1. Tap the purple microphone FAB on the Task List screen.
+2. Allow microphone access the first time.
+3. Tap **Start listening** and dictate one or more actions.
+4. Tap **Finish speaking**, or pause naturally.
+5. Review the tasks that were added.
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+The app requests microphone permission only when voice input is used. Android 11+ speech-service discovery is declared in the manifest, and the native recognizer is destroyed after results, errors, cancellation, or React teardown.
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+## Screenshots
 
-## Congratulations! :tada:
+Real emulator/device screenshots belong in [`screenshots/`](./screenshots). Capture the required states using the filenames documented in [`screenshots/README.md`](./screenshots/README.md), then replace this section with:
 
-You've successfully run and modified your React Native App. :partying_face:
+```md
+| Empty state | Task list |
+| --- | --- |
+| ![Empty state](screenshots/01-empty-state.png) | ![Task list](screenshots/02-task-list.png) |
 
-### Now what?
+| Add task | Voice listening |
+| --- | --- |
+| ![Add task](screenshots/03-add-task.png) | ![Voice listening](screenshots/04-voice-listening.png) |
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+| Voice results | Dark theme |
+| --- | --- |
+| ![Voice results](screenshots/05-voice-results.png) | ![Dark theme](screenshots/06-dark-theme.png) |
+```
 
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+Screenshots must be captured from the actual build; mockups are intentionally not included.
