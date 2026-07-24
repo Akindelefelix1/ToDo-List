@@ -1,4 +1,4 @@
-import React, {useCallback, useMemo, useRef} from 'react';
+import React, {useCallback, useMemo, useRef, useState} from 'react';
 import {
   Animated,
   PanResponder,
@@ -8,11 +8,12 @@ import {
 } from 'react-native';
 import {Check, Pencil, Trash2} from 'lucide-react-native';
 
+import {useAppTheme} from '../theme/ThemeProvider';
 import {triggerHaptic} from '../utils/haptics';
 import {PressableScale} from './PressableScale';
 
 type Props = {
-  children: React.ReactNode;
+  children: (actionsRevealed: boolean) => React.ReactNode;
   onComplete: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -24,10 +25,28 @@ export function SwipeActions({
   onEdit,
   onDelete,
 }: Props) {
+  const {theme} = useAppTheme();
   const translateX = useRef(new Animated.Value(0)).current;
+  const [actionsRevealed, setActionsRevealed] = useState(false);
+  const actionsRevealedRef = useRef(false);
+
+  const setRevealed = useCallback((revealed: boolean) => {
+    if (actionsRevealedRef.current === revealed) {
+      return;
+    }
+    actionsRevealedRef.current = revealed;
+    setActionsRevealed(revealed);
+  }, []);
+
+  const reset = useCallback(() => {
+    translateX.stopAnimation();
+    translateX.setValue(0);
+    setRevealed(false);
+  }, [setRevealed, translateX]);
 
   const close = useCallback(() => {
     translateX.stopAnimation();
+    setRevealed(false);
     Animated.spring(translateX, {
       toValue: 0,
       // PanResponder updates this value on the JS thread. Keeping the spring
@@ -35,8 +54,12 @@ export function SwipeActions({
       useNativeDriver: false,
       speed: 24,
       bounciness: 2,
-    }).start();
-  }, [translateX]);
+    }).start(({finished}) => {
+      if (finished) {
+        translateX.setValue(0);
+      }
+    });
+  }, [setRevealed, translateX]);
 
   const panResponder = useMemo(
     () =>
@@ -46,13 +69,17 @@ export function SwipeActions({
         onPanResponderMove: (_, gesture) => {
           translateX.stopAnimation();
           translateX.setValue(Math.max(-108, Math.min(76, gesture.dx)));
+          setRevealed(gesture.dx < -8);
         },
         onPanResponderRelease: (_, gesture) => {
           if (gesture.dx > 54) {
-            close();
+            // Completion immediately moves the task to another section. Reset
+            // before that rerender so the revealed action cannot remain open.
+            reset();
             triggerHaptic('success');
             onComplete();
           } else if (gesture.dx < -48) {
+            setRevealed(true);
             translateX.stopAnimation();
             Animated.spring(translateX, {
               toValue: -108,
@@ -66,11 +93,12 @@ export function SwipeActions({
         },
         onPanResponderTerminate: () => close(),
       }),
-    [close, onComplete, translateX],
+    [close, onComplete, reset, setRevealed, translateX],
   );
 
   const action = (callback: () => void) => {
-    close();
+    // Edit/delete may navigate or remove the row immediately.
+    reset();
     callback();
   };
 
@@ -96,8 +124,14 @@ export function SwipeActions({
       </View>
       <Animated.View
         {...panResponder.panHandlers}
-        style={[styles.foreground, {transform: [{translateX}]}]}>
-        {children}
+        style={[
+          styles.foreground,
+          {
+            backgroundColor: theme.colors.surface,
+            transform: [{translateX}],
+          },
+        ]}>
+        {children(actionsRevealed)}
       </Animated.View>
     </View>
   );

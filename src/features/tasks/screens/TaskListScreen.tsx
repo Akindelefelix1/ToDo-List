@@ -370,21 +370,25 @@ export function TaskListScreen({navigation}: Props) {
                 onComplete={toggle}
                 onDelete={remove}
                 onEdit={edit}>
-                {viewMode === 'cards' ? (
-                  <TaskItem
-                    onDelete={remove}
-                    onEdit={edit}
-                    onToggle={toggle}
-                    task={item}
-                  />
-                ) : (
-                  <TaskTableRow
-                    onDelete={remove}
-                    onEdit={edit}
-                    onToggle={toggle}
-                    task={item}
-                  />
-                )}
+                {actionsRevealed =>
+                  viewMode === 'cards' ? (
+                    <TaskItem
+                      hideInlineActions={actionsRevealed}
+                      onDelete={remove}
+                      onEdit={edit}
+                      onToggle={toggle}
+                      task={item}
+                    />
+                  ) : (
+                    <TaskTableRow
+                      hideInlineActions={actionsRevealed}
+                      onDelete={remove}
+                      onEdit={edit}
+                      onToggle={toggle}
+                      task={item}
+                    />
+                  )
+                }
               </SwipeActions>
             </View>
           );

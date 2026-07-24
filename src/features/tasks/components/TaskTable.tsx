@@ -20,6 +20,7 @@ type RowProps = {
   onToggle: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  hideInlineActions?: boolean;
 };
 
 export function TaskTableHeader() {
@@ -46,7 +47,13 @@ export function TaskTableHeader() {
   );
 }
 
-export function TaskTableRow({task, onToggle, onEdit, onDelete}: RowProps) {
+export function TaskTableRow({
+  task,
+  onToggle,
+  onEdit,
+  onDelete,
+  hideInlineActions = false,
+}: RowProps) {
   const {theme} = useAppTheme();
   const overdue = !task.completed && isOverdue(task.dueDate);
 
@@ -119,20 +126,24 @@ export function TaskTableRow({task, onToggle, onEdit, onDelete}: RowProps) {
       </Text>
 
       <View style={[styles.actionsColumn, styles.actions]}>
-        <PressableScale
-          accessibilityLabel={`Edit ${task.title}`}
-          hitSlop={6}
-          onPress={onEdit}
-          style={styles.iconButton}>
-          <Pencil color={theme.colors.primary} size={14} />
-        </PressableScale>
-        <PressableScale
-          accessibilityLabel={`Delete ${task.title}`}
-          hitSlop={6}
-          onPress={onDelete}
-          style={styles.iconButton}>
-          <Trash2 color={theme.colors.textMuted} size={14} />
-        </PressableScale>
+        {!hideInlineActions ? (
+          <>
+            <PressableScale
+              accessibilityLabel={`Edit ${task.title}`}
+              hitSlop={6}
+              onPress={onEdit}
+              style={styles.iconButton}>
+              <Pencil color={theme.colors.primary} size={14} />
+            </PressableScale>
+            <PressableScale
+              accessibilityLabel={`Delete ${task.title}`}
+              hitSlop={6}
+              onPress={onDelete}
+              style={styles.iconButton}>
+              <Trash2 color={theme.colors.textMuted} size={14} />
+            </PressableScale>
+          </>
+        ) : null}
       </View>
     </View>
   );

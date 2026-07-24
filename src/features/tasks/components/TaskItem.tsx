@@ -33,9 +33,16 @@ type Props = {
   onToggle: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  hideInlineActions?: boolean;
 };
 
-export function TaskItem({task, onToggle, onEdit, onDelete}: Props) {
+export function TaskItem({
+  task,
+  onToggle,
+  onEdit,
+  onDelete,
+  hideInlineActions = false,
+}: Props) {
   const {theme} = useAppTheme();
   const [expanded, setExpanded] = useState(false);
   const entrance = useRef(new Animated.Value(0)).current;
@@ -205,20 +212,27 @@ export function TaskItem({task, onToggle, onEdit, onDelete}: Props) {
               <ChevronDown color={theme.colors.textMuted} size={17} />
             )}
           </PressableScale>
-          <PressableScale
-            accessibilityLabel={`Edit ${task.title}`}
-            onPress={onEdit}
-            hitSlop={8}
-            style={styles.actionButton}>
-            <Pencil color={theme.colors.primary} size={16} />
-          </PressableScale>
-          <PressableScale
-            accessibilityLabel={`Delete ${task.title}`}
-            onPress={onDelete}
-            hitSlop={8}
-            style={styles.actionButton}>
-            <Trash2 color={theme.colors.textMuted} size={17} />
-          </PressableScale>
+          <View
+            pointerEvents={hideInlineActions ? 'none' : 'auto'}
+            style={[
+              styles.inlineActions,
+              hideInlineActions && styles.hiddenInlineActions,
+            ]}>
+            <PressableScale
+              accessibilityLabel={`Edit ${task.title}`}
+              onPress={onEdit}
+              hitSlop={8}
+              style={styles.actionButton}>
+              <Pencil color={theme.colors.primary} size={16} />
+            </PressableScale>
+            <PressableScale
+              accessibilityLabel={`Delete ${task.title}`}
+              onPress={onDelete}
+              hitSlop={8}
+              style={styles.actionButton}>
+              <Trash2 color={theme.colors.textMuted} size={17} />
+            </PressableScale>
+          </View>
         </View>
       </View>
     </Animated.View>
@@ -262,7 +276,8 @@ const styles = StyleSheet.create({
   },
   actions: {
     alignItems: 'center',
-    gap: spacing.sm,
+    flexDirection: 'row',
+    gap: spacing.xs,
   },
   description: {
     fontSize: fontSize.caption,
@@ -276,6 +291,13 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 10,
     fontWeight: '600',
+  },
+  hiddenInlineActions: {
+    opacity: 0,
+  },
+  inlineActions: {
+    flexDirection: 'row',
+    gap: spacing.xs,
   },
   dueDate: {
     fontSize: fontSize.caption,
