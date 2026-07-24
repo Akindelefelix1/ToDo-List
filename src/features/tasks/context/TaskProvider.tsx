@@ -23,7 +23,7 @@ type TaskContextValue = {
   isLoading: boolean;
   storageError: string | null;
   addTask: (task: NewTask) => Task;
-  addTasks: (titles: string[]) => Task[];
+  addVoiceTasks: (titles: string[]) => Task[];
   updateTask: (id: string, changes: NewTask) => void;
   toggleTask: (id: string) => void;
   deleteTask: (id: string) => void;
@@ -48,7 +48,7 @@ function reducer(state: Task[], action: TaskAction): Task[] {
   }
 }
 
-function createTask(input: NewTask): Task {
+function createTask(input: NewTask, source: Task['source'] = 'typed'): Task {
   const createdAt = new Date().toISOString();
   return {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
@@ -57,6 +57,7 @@ function createTask(input: NewTask): Task {
     completed: false,
     createdAt,
     dueDate: input.dueDate,
+    source,
   };
 }
 
@@ -86,8 +87,8 @@ export function TaskProvider({children}: React.PropsWithChildren) {
     return task;
   }, []);
 
-  const addTasks = useCallback((titles: string[]) => {
-    const created = titles.map(title => createTask({title}));
+  const addVoiceTasks = useCallback((titles: string[]) => {
+    const created = titles.map(title => createTask({title}, 'voice'));
     dispatch({type: 'add', tasks: created});
     return created;
   }, []);
@@ -125,14 +126,14 @@ export function TaskProvider({children}: React.PropsWithChildren) {
       isLoading,
       storageError,
       addTask,
-      addTasks,
+      addVoiceTasks,
       updateTask,
       toggleTask,
       deleteTask,
     }),
     [
       addTask,
-      addTasks,
+      addVoiceTasks,
       deleteTask,
       isLoading,
       storageError,

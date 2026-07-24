@@ -5,6 +5,7 @@ export type Task = {
   completed: boolean;
   createdAt: string;
   dueDate?: string;
+  source: 'typed' | 'voice';
 };
 
 export type NewTask = Pick<Task, 'title'> &

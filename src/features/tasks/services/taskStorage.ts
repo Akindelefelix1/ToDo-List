@@ -24,7 +24,12 @@ export async function loadTasks(): Promise<Task[]> {
   }
 
   const parsed: unknown = JSON.parse(value);
-  return Array.isArray(parsed) ? parsed.filter(isTask) : [];
+  return Array.isArray(parsed)
+    ? parsed.filter(isTask).map(task => ({
+        ...task,
+        source: task.source === 'voice' ? 'voice' : 'typed',
+      }))
+    : [];
 }
 
 export function saveTasks(tasks: Task[]) {

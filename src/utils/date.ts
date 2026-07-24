@@ -27,6 +27,26 @@ export function formatDueDate(value: string) {
   return due.toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
 }
 
+export function formatCreatedAt(value: string) {
+  const created = new Date(value);
+  const isToday = startOfDay(created).getTime() === startOfDay().getTime();
+  const time = created.toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+
+  if (isToday) {
+    return `Created today at ${time}`;
+  }
+
+  const date = created.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: created.getFullYear() === new Date().getFullYear() ? undefined : 'numeric',
+  });
+  return `Created ${date} at ${time}`;
+}
+
 export function isOverdue(value?: string) {
   return Boolean(value && startOfDay(new Date(value)) < startOfDay());
 }

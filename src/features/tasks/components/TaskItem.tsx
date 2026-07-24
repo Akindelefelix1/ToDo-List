@@ -1,11 +1,23 @@
 import React, {useEffect, useRef} from 'react';
 import {Animated, LayoutAnimation, StyleSheet, Text, View} from 'react-native';
-import {CalendarDays, Check, Pencil, Trash2} from 'lucide-react-native';
+import {
+  CalendarDays,
+  Check,
+  Clock3,
+  Keyboard,
+  Mic,
+  Pencil,
+  Trash2,
+} from 'lucide-react-native';
 
 import {PressableScale} from '../../../components/PressableScale';
 import {useAppTheme} from '../../../theme/ThemeProvider';
 import {fontSize, radius, spacing} from '../../../theme/tokens';
-import {formatDueDate, isOverdue} from '../../../utils/date';
+import {
+  formatCreatedAt,
+  formatDueDate,
+  isOverdue,
+} from '../../../utils/date';
 
 import type {Task} from '../types/task';
 
@@ -77,17 +89,35 @@ export function TaskItem({task, onToggle, onEdit, onDelete}: Props) {
         </PressableScale>
 
         <View style={styles.content}>
-          <Text
-            numberOfLines={2}
-            style={[
-              styles.title,
-              {
-                color: task.completed ? theme.colors.textMuted : theme.colors.text,
-              },
-              task.completed && styles.completedText,
-            ]}>
-            {task.title}
-          </Text>
+          <View style={styles.titleRow}>
+            <Text
+              numberOfLines={2}
+              style={[
+                styles.title,
+                {
+                  color: task.completed
+                    ? theme.colors.textMuted
+                    : theme.colors.text,
+                },
+                task.completed && styles.completedText,
+              ]}>
+              {task.title}
+            </Text>
+            <View
+              style={[
+                styles.sourceBadge,
+                {backgroundColor: theme.colors.primarySoft},
+              ]}>
+              {task.source === 'voice' ? (
+                <Mic color={theme.colors.primary} size={10} />
+              ) : (
+                <Keyboard color={theme.colors.primary} size={10} />
+              )}
+              <Text style={[styles.sourceLabel, {color: theme.colors.primary}]}>
+                {task.source === 'voice' ? 'Voice' : 'Typed'}
+              </Text>
+            </View>
+          </View>
           {task.description ? (
             <Text
               numberOfLines={2}
@@ -117,6 +147,12 @@ export function TaskItem({task, onToggle, onEdit, onDelete}: Props) {
               </Text>
             </View>
           ) : null}
+          <View style={styles.meta}>
+            <Clock3 color={theme.colors.textMuted} size={12} />
+            <Text style={[styles.createdAt, {color: theme.colors.textMuted}]}>
+              {formatCreatedAt(task.createdAt)}
+            </Text>
+          </View>
         </View>
 
         <View style={styles.actions}>
@@ -165,6 +201,10 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacing.xs,
   },
+  createdAt: {
+    fontSize: 10,
+    fontWeight: '500',
+  },
   actionButton: {
     alignItems: 'center',
     height: 28,
@@ -189,9 +229,27 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     marginTop: spacing.xs,
   },
+  sourceBadge: {
+    alignItems: 'center',
+    borderRadius: radius.pill,
+    flexDirection: 'row',
+    gap: 3,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+  },
+  sourceLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+  },
   title: {
+    flex: 1,
     fontSize: fontSize.bodyLarge,
     fontWeight: '700',
     lineHeight: 19,
+  },
+  titleRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: spacing.sm,
   },
 });

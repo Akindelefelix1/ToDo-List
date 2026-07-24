@@ -49,7 +49,7 @@ export function TaskListScreen({navigation}: Props) {
     tasks,
     isLoading,
     storageError,
-    addTasks,
+    addVoiceTasks,
     toggleTask,
     deleteTask,
   } = useTasks();
@@ -63,11 +63,11 @@ export function TaskListScreen({navigation}: Props) {
     (transcript: string) => {
       const titles = splitVoiceTasks(transcript);
       if (titles.length) {
-        addTasks(titles);
+        addVoiceTasks(titles);
         setCreatedByVoice(titles);
       }
     },
-    [addTasks],
+    [addVoiceTasks],
   );
 
   const voice = useVoiceRecognition(handleVoiceResult);
