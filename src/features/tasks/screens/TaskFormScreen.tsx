@@ -20,6 +20,8 @@ import type {RootStackParamList} from '../../../types/navigation';
 import {addDays, formatDueDate, startOfDay} from '../../../utils/date';
 
 import {useTasks} from '../context/TaskProvider';
+import type {TaskPriority} from '../types/task';
+import {PriorityBadge} from '../components/PriorityBadge';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TaskForm'>;
 
@@ -36,6 +38,9 @@ export function TaskFormScreen({navigation, route}: Props) {
   const [dueDate, setDueDate] = useState<Date | null>(
     existingTask?.dueDate ? new Date(existingTask.dueDate) : null,
   );
+  const [priority, setPriority] = useState<TaskPriority>(
+    existingTask?.priority ?? 'medium',
+  );
   const [titleError, setTitleError] = useState('');
 
   const canSave = title.trim().length > 0;
@@ -44,6 +49,7 @@ export function TaskFormScreen({navigation, route}: Props) {
       {label: 'Today', date: startOfDay()},
       {label: 'Tomorrow', date: addDays(new Date(), 1)},
       {label: 'Next week', date: addDays(new Date(), 7)},
+      {label: 'Already due', date: addDays(new Date(), -1)},
     ],
     [],
   );
@@ -57,6 +63,7 @@ export function TaskFormScreen({navigation, route}: Props) {
       title,
       description,
       dueDate: dueDate?.toISOString(),
+      priority,
     };
     if (existingTask) {
       updateTask(existingTask.id, changes);
@@ -168,6 +175,38 @@ export function TaskFormScreen({navigation, route}: Props) {
             textAlignVertical="top"
             value={description}
           />
+        </View>
+
+        <View style={styles.field}>
+          <Text style={[styles.label, {color: theme.colors.text}]}>Priority</Text>
+          <View style={styles.priorityOptions}>
+            {(['low', 'medium', 'high'] as const).map(option => {
+              const selected = priority === option;
+              return (
+                <PressableScale
+                  accessibilityLabel={`${option} priority`}
+                  accessibilityState={{selected}}
+                  key={option}
+                  onPress={() => setPriority(option)}
+                  style={[
+                    styles.priorityOption,
+                    {
+                      backgroundColor: selected
+                        ? theme.colors.primarySoft
+                        : theme.colors.surface,
+                      borderColor: selected
+                        ? theme.colors.primary
+                        : theme.colors.border,
+                    },
+                  ]}>
+                  <PriorityBadge priority={option} />
+                  {selected ? (
+                    <Check color={theme.colors.primary} size={15} strokeWidth={3} />
+                  ) : null}
+                </PressableScale>
+              );
+            })}
+          </View>
         </View>
 
         <View style={styles.field}>
@@ -351,6 +390,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
+  },
+  priorityOption: {
+    alignItems: 'center',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    minHeight: 48,
+    paddingHorizontal: spacing.sm,
+  },
+  priorityOptions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
   },
   saveButton: {
     alignItems: 'center',

@@ -20,6 +20,7 @@ import {
 } from '../../../utils/date';
 
 import type {Task} from '../types/task';
+import {PriorityBadge} from './PriorityBadge';
 
 type Props = {
   task: Task;
@@ -131,6 +132,7 @@ export function TaskItem({task, onToggle, onEdit, onDelete}: Props) {
               {task.description}
             </Text>
           ) : null}
+          <PriorityBadge priority={task.priority} />
           {task.dueDate ? (
             <View style={styles.meta}>
               <CalendarDays

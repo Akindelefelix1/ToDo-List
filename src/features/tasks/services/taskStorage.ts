@@ -28,6 +28,10 @@ export async function loadTasks(): Promise<Task[]> {
     ? parsed.filter(isTask).map(task => ({
         ...task,
         source: task.source === 'voice' ? 'voice' : 'typed',
+        priority:
+          task.priority === 'high' || task.priority === 'low'
+            ? task.priority
+            : 'medium',
       }))
     : [];
 }

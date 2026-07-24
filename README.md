@@ -6,11 +6,13 @@ A polished, offline-first to-do application built with React Native Community CL
 
 - Add tasks with a required title, optional description, and optional due date
 - Edit created tasks without losing their completion state
+- Assign and update Low, Medium, or High task priority
 - Mark tasks complete or incomplete
 - Delete tasks with confirmation
 - Persist tasks and theme preference with AsyncStorage
 - Search tasks and filter by all, active, or completed
 - Sort by newest or due date
+- Switch between detailed card and compact table views
 - Toggle light and dark themes
 - Dictate one or multiple tasks from the animated microphone FAB
 - Split natural speech such as “Buy provisions and call mom” into separate tasks

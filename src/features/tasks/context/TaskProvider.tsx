@@ -58,6 +58,7 @@ function createTask(input: NewTask, source: Task['source'] = 'typed'): Task {
     createdAt,
     dueDate: input.dueDate,
     source,
+    priority: input.priority ?? 'medium',
   };
 }
 
@@ -106,6 +107,7 @@ export function TaskProvider({children}: React.PropsWithChildren) {
           title: changes.title.trim(),
           description: changes.description?.trim() || undefined,
           dueDate: changes.dueDate,
+          priority: changes.priority ?? existing.priority,
         },
       });
     },

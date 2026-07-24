@@ -1,4 +1,4 @@
-import React, {useCallback, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
   Alert,
   FlatList,
@@ -7,15 +7,19 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {
   ArrowDownUp,
   CalendarClock,
+  LayoutList,
   Mic,
   Moon,
   Plus,
   Search,
   Sun,
+  Table2,
+  X,
 } from 'lucide-react-native';
 
 import {Chip} from '../../../components/Chip';
@@ -32,8 +36,14 @@ import {splitVoiceTasks} from '../../../utils/splitVoiceTasks';
 import {EmptyTasks} from '../components/EmptyTasks';
 import {TaskItem} from '../components/TaskItem';
 import {TaskProgress} from '../components/TaskProgress';
+import {TaskTableHeader, TaskTableRow} from '../components/TaskTable';
 import {useTasks} from '../context/TaskProvider';
-import type {Task, TaskFilter, TaskSort} from '../types/task';
+import type {
+  Task,
+  TaskFilter,
+  TaskSort,
+  TaskViewMode,
+} from '../types/task';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TaskList'>;
 
@@ -42,6 +52,7 @@ const filters: {label: string; value: TaskFilter}[] = [
   {label: 'Active', value: 'active'},
   {label: 'Completed', value: 'completed'},
 ];
+const VIEW_MODE_KEY = '@todo-list/task-view-mode';
 
 export function TaskListScreen({navigation}: Props) {
   const {theme, preference, toggleTheme} = useAppTheme();
@@ -56,6 +67,7 @@ export function TaskListScreen({navigation}: Props) {
   const [filter, setFilter] = useState<TaskFilter>('all');
   const [sort, setSort] = useState<TaskSort>('created');
   const [query, setQuery] = useState('');
+  const [viewMode, setViewMode] = useState<TaskViewMode>('cards');
   const [voiceOpen, setVoiceOpen] = useState(false);
   const [createdByVoice, setCreatedByVoice] = useState<string[]>([]);
 
@@ -71,6 +83,24 @@ export function TaskListScreen({navigation}: Props) {
   );
 
   const voice = useVoiceRecognition(handleVoiceResult);
+
+  useEffect(() => {
+    AsyncStorage.getItem(VIEW_MODE_KEY)
+      .then(value => {
+        if (value === 'cards' || value === 'table') {
+          setViewMode(value);
+        }
+      })
+      .catch(() => undefined);
+  }, []);
+
+  const toggleViewMode = () => {
+    setViewMode(current => {
+      const next = current === 'cards' ? 'table' : 'cards';
+      AsyncStorage.setItem(VIEW_MODE_KEY, next).catch(() => undefined);
+      return next;
+    });
+  };
 
   const visibleTasks = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -198,6 +228,18 @@ export function TaskListScreen({navigation}: Props) {
                 style={[styles.searchInput, {color: theme.colors.text}]}
                 value={query}
               />
+              {query ? (
+                <PressableScale
+                  accessibilityLabel="Clear search"
+                  hitSlop={10}
+                  onPress={() => setQuery('')}
+                  style={[
+                    styles.clearSearch,
+                    {backgroundColor: theme.colors.background},
+                  ]}>
+                  <X color={theme.colors.textMuted} size={14} strokeWidth={2.5} />
+                </PressableScale>
+              ) : null}
             </View>
 
             <View style={styles.controls}>
@@ -211,18 +253,30 @@ export function TaskListScreen({navigation}: Props) {
                   />
                 ))}
               </View>
-              <IconButton
-                icon={sort === 'dueDate' ? CalendarClock : ArrowDownUp}
-                label={
-                  sort === 'dueDate'
-                    ? 'Sort by newest'
-                    : 'Sort by due date'
-                }
-                onPress={() =>
-                  setSort(current => (current === 'created' ? 'dueDate' : 'created'))
-                }
-                selected={sort === 'dueDate'}
-              />
+              <View style={styles.controlActions}>
+                <IconButton
+                  icon={sort === 'dueDate' ? CalendarClock : ArrowDownUp}
+                  label={
+                    sort === 'dueDate'
+                      ? 'Sort by newest'
+                      : 'Sort by due date'
+                  }
+                  onPress={() =>
+                    setSort(current =>
+                      current === 'created' ? 'dueDate' : 'created',
+                    )
+                  }
+                  selected={sort === 'dueDate'}
+                />
+                <IconButton
+                  icon={viewMode === 'cards' ? Table2 : LayoutList}
+                  label={`Switch to ${
+                    viewMode === 'cards' ? 'table' : 'card'
+                  } view`}
+                  onPress={toggleViewMode}
+                  selected={viewMode === 'table'}
+                />
+              </View>
             </View>
 
             {visibleTasks.length ? (
@@ -230,18 +284,30 @@ export function TaskListScreen({navigation}: Props) {
                 {visibleTasks.length} {visibleTasks.length === 1 ? 'TASK' : 'TASKS'}
               </Text>
             ) : null}
+            {visibleTasks.length && viewMode === 'table' ? (
+              <View style={styles.tableHeaderContainer}>
+                <TaskTableHeader />
+              </View>
+            ) : null}
           </View>
         }
-        renderItem={({item}) => (
-          <View style={styles.item}>
-            <TaskItem
-              onDelete={() => askToDelete(item)}
-              onEdit={() => navigation.navigate('TaskForm', {taskId: item.id})}
-              onToggle={() => toggleTask(item.id)}
-              task={item}
-            />
-          </View>
-        )}
+        renderItem={({item}) => {
+          const actions = {
+            onDelete: () => askToDelete(item),
+            onEdit: () => navigation.navigate('TaskForm', {taskId: item.id}),
+            onToggle: () => toggleTask(item.id),
+          };
+
+          return (
+            <View style={viewMode === 'cards' ? styles.item : styles.tableItem}>
+              {viewMode === 'cards' ? (
+                <TaskItem {...actions} task={item} />
+              ) : (
+                <TaskTableRow {...actions} task={item} />
+              )}
+            </View>
+          );
+        }}
         showsVerticalScrollIndicator={false}
       />
 
@@ -308,6 +374,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
     justifyContent: 'space-between',
+    flexWrap: 'wrap',
+  },
+  controlActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  clearSearch: {
+    alignItems: 'center',
+    borderRadius: radius.pill,
+    height: 26,
+    justifyContent: 'center',
+    width: 26,
   },
   eyebrow: {
     fontSize: 9,
@@ -385,5 +463,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
+  },
+  tableHeaderContainer: {
+    marginBottom: -spacing.lg,
+  },
+  tableItem: {
+    paddingHorizontal: spacing.xl,
   },
 });
