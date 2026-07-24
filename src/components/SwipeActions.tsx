@@ -26,13 +26,17 @@ export function SwipeActions({
 }: Props) {
   const translateX = useRef(new Animated.Value(0)).current;
 
-  const close = useCallback(() =>
+  const close = useCallback(() => {
+    translateX.stopAnimation();
     Animated.spring(translateX, {
       toValue: 0,
-      useNativeDriver: true,
+      // PanResponder updates this value on the JS thread. Keeping the spring
+      // on the same driver prevents mixed-driver errors on later swipes.
+      useNativeDriver: false,
       speed: 24,
       bounciness: 2,
-    }).start(), [translateX]);
+    }).start();
+  }, [translateX]);
 
   const panResponder = useMemo(
     () =>
@@ -40,6 +44,7 @@ export function SwipeActions({
         onMoveShouldSetPanResponder: (_, gesture) =>
           Math.abs(gesture.dx) > 8 && Math.abs(gesture.dx) > Math.abs(gesture.dy),
         onPanResponderMove: (_, gesture) => {
+          translateX.stopAnimation();
           translateX.setValue(Math.max(-108, Math.min(76, gesture.dx)));
         },
         onPanResponderRelease: (_, gesture) => {
@@ -48,9 +53,10 @@ export function SwipeActions({
             triggerHaptic('success');
             onComplete();
           } else if (gesture.dx < -48) {
+            translateX.stopAnimation();
             Animated.spring(translateX, {
               toValue: -108,
-              useNativeDriver: true,
+              useNativeDriver: false,
               speed: 24,
               bounciness: 2,
             }).start();
@@ -58,7 +64,7 @@ export function SwipeActions({
             close();
           }
         },
-        onPanResponderTerminate: close,
+        onPanResponderTerminate: () => close(),
       }),
     [close, onComplete, translateX],
   );
