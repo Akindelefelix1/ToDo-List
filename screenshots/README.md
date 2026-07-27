@@ -1,6 +1,6 @@
 # App screenshots
 
-Place full-device PNG or JPG captures here before submission:
+
 
 1. `01-empty-state.png`
 2. `02-task-list.png`
@@ -12,5 +12,6 @@ Place full-device PNG or JPG captures here before submission:
 8. `08-sort-options.png`
 9. `09-reminder-recurrence.png`
 10. `10-swipe-undo.png`
+etc
 
-The captures must come from the running Android build, without mockup frames.
+

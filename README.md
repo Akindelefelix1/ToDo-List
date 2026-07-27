@@ -69,31 +69,8 @@ Native Android voice and reminder code lives in:
 android/app/src/main/java/com/akindelefelix/todolist/
 ```
 
-## Prerequisites
 
-- Node.js `22.11` or newer
-- JDK 17
-- Android Studio and Android SDK
-- Android emulator with Google speech services, or a physical Android device
 
-Complete the official React Native [Android environment setup](https://reactnative.dev/docs/set-up-your-environment) first.
-
-## Install and run
-
-This repository uses npm:
-
-```powershell
-npm.cmd install
-npm.cmd start
-```
-
-In a second terminal:
-
-```powershell
-npm.cmd run android
-```
-
-On shells without the Windows PowerShell script restriction, use `npm` instead of `npm.cmd`.
 
 ## Quality checks
 
@@ -102,15 +79,6 @@ npm.cmd run typecheck
 npm.cmd run lint
 npm.cmd test -- --runInBand
 ```
-
-Build a debug APK:
-
-```powershell
-cd android
-.\gradlew.bat assembleDebug
-```
-
-The APK is generated at `android/app/build/outputs/apk/debug/app-debug.apk`.
 
 ## Voice input
 
@@ -131,6 +99,5 @@ Completing a daily, weekly, or monthly task creates its next occurrence. Undoing
 
 ## Screenshots
 
-Real emulator/device screenshots belong in [`screenshots/`](./screenshots). Capture the required states listed in [`screenshots/README.md`](./screenshots/README.md), then embed them here before submission.
+Real device screenshots are in [`screenshots/`](./screenshots).
 
-Screenshots must come from the running build; mockups are intentionally not included.
